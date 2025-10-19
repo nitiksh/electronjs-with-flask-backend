@@ -3,64 +3,88 @@ const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
 
-const FLASK_URL = 'http://127.0.0.1:5000';
-let flaskProcess;
+const FLASK_URL = 'http://127.0.0.1:5500';
+let flaskProcess = null;
+let mainWindow = null;
 
-// Simple function to check if Flask is running
-function checkFlaskRunning(callback) {
-    http.get(FLASK_URL, res => {
-        if (res.statusCode === 200) callback(true);
-        else callback(false);
+// Check if Flask server is ready
+function checkFlaskReady(callback) {
+    http.get(`${FLASK_URL}/health`, (res) => {
+        callback(res.statusCode === 200);
     }).on('error', () => callback(false));
 }
 
-// Wait until Flask starts
-function waitForFlaskServer(callback) {
-    const start = Date.now();
-    const interval = setInterval(() => {
-        checkFlaskRunning((ready) => {
-            if (ready) {
-                clearInterval(interval);
-                callback();
-            } else if (Date.now() - start > 10000) {
-                clearInterval(interval);
-                console.error("Flask server did not start in time.");
+// Wait for Flask to start (max 20 seconds)
+function waitForFlask(callback) {
+    const startTime = Date.now();
+    const checkInterval = setInterval(() => {
+        checkFlaskReady((isReady) => {
+            if (isReady) {
+                clearInterval(checkInterval);
+                console.log("✅ Flask is ready!");
+                callback(true);
+            } else if (Date.now() - startTime > 20000) {
+                clearInterval(checkInterval);
+                console.log("❌ Flask timeout");
+                callback(false);
             }
         });
     }, 500);
 }
 
-// Create the Electron window
+// Create Electron window
 function createWindow() {
-    const win = new BrowserWindow({
+    mainWindow = new BrowserWindow({
         width: 1000,
         height: 700,
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true
+        }
     });
-    win.loadURL(FLASK_URL);
+
+    mainWindow.loadURL(FLASK_URL);
+
+    // Open DevTools in development
+    // mainWindow.webContents.openDevTools();
 }
 
-// Start Flask + Electron
+// Start the app
 app.whenReady().then(() => {
-    console.log("Starting Flask server...");
+    console.log("🚀 Starting Flask + Electron...");
+
+    // Get Flask file path
+    const flaskPath = app.isPackaged
+        ? path.join(process.resourcesPath, 'main.py')
+        : path.join(__dirname, 'main.py');
+
+    console.log("📂 Flask path:", flaskPath);
 
     // Start Flask server
-    const flaskPath = path.join(__dirname, 'main.py');
-    flaskProcess = spawn('python', [flaskPath], { stdio: 'inherit' });
-
-    // Wait until Flask is ready, then open Electron window
-    waitForFlaskServer(() => {
-        console.log("Flask server is ready. Launching Electron...");
-        createWindow();
+    flaskProcess = spawn('python', [flaskPath], {
+        windowsHide: true  // Hide console window
     });
 
-    // Handle re-activation (macOS)
+    // Wait for Flask, then open window
+    waitForFlask((ready) => {
+        if (ready) {
+            createWindow();
+        } else {
+            console.error("Failed to start Flask");
+            app.quit();
+        }
+    });
+
+    // macOS: Recreate window when dock icon is clicked
     app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) createWindow();
+        if (BrowserWindow.getAllWindows().length === 0) {
+            createWindow();
+        }
     });
 });
 
-// Close Flask when Electron exits
+// Cleanup: Kill Flask when app closes
 app.on('window-all-closed', () => {
     if (flaskProcess) flaskProcess.kill();
-    if (process.platform !== 'darwin') app.quit();
+    app.quit();
 });

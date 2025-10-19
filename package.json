@@ -5,11 +5,44 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "build": "electron-builder",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Nitiksh",
+  "author": "Default Author",
   "license": "MIT",
   "devDependencies": {
     "electron": "^38.3.0"
+  },
+  "build": {
+    "appId": "example.test.app",
+    "productName": "testapp",
+    "extraResources": [
+      {
+        "from": ".",
+        "to": ".",
+        "filter": [
+          "main.py",
+          "**/*.py",
+          "templates/**/*"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "dist-build"
+    },
+    "files": [
+      "main.js",
+      "templates/",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

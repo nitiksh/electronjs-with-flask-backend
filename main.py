@@ -1,7 +1,8 @@
-from flask import Flask, request, jsonify, render_template
-from datetime import datetime
+from flask import Flask, render_template
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 
 @app.route("/", methods=["GET"])
@@ -15,4 +16,4 @@ def health():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5500, debug=True)
