@@ -1,0 +1,15 @@
+{
+  "name": "electron-app-with-flask-server",
+  "version": "1.0.0",
+  "description": "An Electron application that integrates with a Flask server.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nitiksh",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^38.3.0"
+  }
+}
